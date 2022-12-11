@@ -5,6 +5,8 @@ use std::collections::HashSet;
 /// If you move the head and this is no longer the case, the tail moves.
 /// A:
 /// Given an input of head movements, count the number of unique spaces visited by the tail.
+/// A:
+/// Increase the number of knots to 10 and calculate the same count.
 
 #[derive(Hash, PartialEq, Eq, Clone, Copy)]
 struct Pos {
@@ -20,63 +22,75 @@ enum Step {
     Right,
 }
 
-fn main() {
-    let input = include_str!("../../assets/day9.txt");
-
-    // Parse the input moves into individual steps
-    let steps = input.lines().flat_map(|line| {
-        let seg = line.split(' ').collect::<Vec<_>>();
-        let count = seg[1].parse().unwrap();
-        let step = match seg[0] {
-            "U" => Step::Up,
-            "D" => Step::Down,
-            "L" => Step::Left,
-            "R" => Step::Right,
-            _ => panic!("Invalid move direction"),
-        };
-
-        let mut steps = vec![];
-        for _ in 0..count {
-            steps.push(step);
-        }
-
-        steps
-    });
-
-    let mut head_pos = Pos { x: 0, y: 0 };
-    let mut tail_pos = Pos { x: 0, y: 0 };
+fn count_tail_pos(steps: &Vec<Step>, knots: usize) {
+    let mut rope = vec![Pos { x: 0, y: 0 }; knots];
 
     let mut tails = HashSet::new();
-    tails.insert(tail_pos);
+    tails.insert(*rope.last().unwrap());
 
     for step in steps {
         // Move the head
         match step {
-            Step::Up => head_pos.y -= 1,
-            Step::Down => head_pos.y += 1,
-            Step::Left => head_pos.x -= 1,
-            Step::Right => head_pos.x += 1,
+            Step::Up => rope[0].y -= 1,
+            Step::Down => rope[0].y += 1,
+            Step::Left => rope[0].x -= 1,
+            Step::Right => rope[0].x += 1,
         }
 
-        // Work out the distance between the H and T
-        let diff = Pos {
-            x: head_pos.x - tail_pos.x,
-            y: head_pos.y - tail_pos.y,
-        };
+        for idx in 1..rope.len() {
+            let prev = rope[idx - 1];
+            let curr = &mut rope[idx];
+            // Work out the distance between the previous and current knot
+            let diff = Pos {
+                x: prev.x - curr.x,
+                y: prev.y - curr.y,
+            };
 
-        // If they are too far apart move the tail
-        if (diff.x.abs() == 2 || diff.y.abs() == 2) && diff.x.abs() + diff.y.abs() > 2 {
-            // Move diag
-            tail_pos.x += diff.x.clamp(-1, 1);
-            tail_pos.y += diff.y.clamp(-1, 1);
-        } else if diff.x.abs() == 2 {
-            tail_pos.x += diff.x.clamp(-1, 1);
-        } else if diff.y.abs() == 2 {
-            tail_pos.y += diff.y.clamp(-1, 1);
+            // If they are too far apart move the knot
+            if (diff.x.abs() == 2 || diff.y.abs() == 2) && diff.x.abs() + diff.y.abs() > 2 {
+                // Move diag
+                curr.x += diff.x.clamp(-1, 1);
+                curr.y += diff.y.clamp(-1, 1);
+            } else if diff.x.abs() == 2 {
+                curr.x += diff.x.clamp(-1, 1);
+            } else if diff.y.abs() == 2 {
+                curr.y += diff.y.clamp(-1, 1);
+            }
         }
 
-        tails.insert(tail_pos);
+        tails.insert(*rope.last().unwrap());
     }
 
-    println!("Tail position count: {}", tails.len());
+    println!("Tail position count: {}", tails.len()); // 6357
+}
+
+fn main() {
+    let input = include_str!("../../assets/day9.txt");
+
+    // Parse the input moves into individual steps
+    let steps = input
+        .lines()
+        .flat_map(|line| {
+            let seg = line.split(' ').collect::<Vec<_>>();
+            let count = seg[1].parse().unwrap();
+            let step = match seg[0] {
+                "U" => Step::Up,
+                "D" => Step::Down,
+                "L" => Step::Left,
+                "R" => Step::Right,
+                _ => panic!("Invalid move direction"),
+            };
+
+            let mut steps = vec![];
+            for _ in 0..count {
+                steps.push(step);
+            }
+
+            steps
+        })
+        .collect::<Vec<_>>();
+
+    count_tail_pos(&steps, 2);
+
+    count_tail_pos(&steps, 10);
 }
