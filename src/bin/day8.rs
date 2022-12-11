@@ -3,8 +3,12 @@ use std::collections::HashSet;
 /// Input is a grid of tree heights.
 /// Find the trees visible from the outside looking in.
 /// You cannot see over a tree of equal of greater height.
+/// Part 2:
+/// Find the highest scenic score in the grid. A scenic score
+/// is how many trees you can see from that point (including the blocking tree)
+/// in each direction multiplied together.
 
-fn find_visible(grid: Vec<Vec<i64>>) {
+fn find_visible(grid: &Vec<Vec<i64>>) {
     let mut set = HashSet::new();
 
     for (row_idx, row) in grid.iter().enumerate() {
@@ -52,6 +56,61 @@ fn find_visible(grid: Vec<Vec<i64>>) {
     println!("Visible trees: {}", set.len());
 }
 
+fn find_highest_scenic_score(grid: &[Vec<i64>]) {
+    let mut highest = 0;
+
+    for row in 0..grid.len() {
+        for col in 0..grid[row].len() {
+            let score = find_scenic_score(grid, (row, col));
+            highest = highest.max(score);
+        }
+    }
+
+    println!("Highest scenic score is: {}", highest);
+}
+
+fn find_scenic_score(grid: &[Vec<i64>], point: (usize, usize)) -> i64 {
+    let (test_row, test_col) = point;
+
+    // Look right
+    let mut right_score = -1;
+    for col in test_col..grid[test_row].len() {
+        right_score += 1;
+        if col != test_col && grid[test_row][col] >= grid[test_row][test_col] {
+            break;
+        }
+    }
+
+    // Look left
+    let mut left_score = 0;
+    for col in (0..test_col).rev() {
+        left_score += 1;
+        if col != test_col && grid[test_row][col] >= grid[test_row][test_col] {
+            break;
+        }
+    }
+
+    // Look down
+    let mut down_score = -1;
+    for row in test_row..grid.len() {
+        down_score += 1;
+        if row != test_row && grid[row][test_col] >= grid[test_row][test_col] {
+            break;
+        }
+    }
+
+    // Look up
+    let mut up_score = 0;
+    for row in (0..test_row).rev() {
+        up_score += 1;
+        if row != test_row && grid[row][test_col] >= grid[test_row][test_col] {
+            break;
+        }
+    }
+
+    right_score * left_score * down_score * up_score
+}
+
 /// The input is a grid of tree heights.
 /// You can only see over a tree of it is shorter than the tree you want to look at.
 /// You can only look vertically or horizontally.
@@ -70,5 +129,8 @@ fn main() {
         .collect::<Vec<_>>();
 
     // Print the number of visible trees
-    find_visible(grid);
+    find_visible(&grid);
+
+    // Print highest scenic score
+    find_highest_scenic_score(&grid);
 }
