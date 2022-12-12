@@ -6,6 +6,10 @@ use std::collections::HashSet;
 /// You can only move to a square 1 higher but any number lower.
 /// Part A:
 /// What is the shortest number of steps to get from start to end.
+/// Part B:
+/// What is the shortest path from any a elevation to E.
+
+type IsEndFn = Box<dyn Fn((usize, usize), &[Vec<char>]) -> bool>;
 
 fn in_bounds(grid: &Vec<Vec<char>>, pos: (usize, usize)) -> bool {
     if pos.0 >= grid.len() {
@@ -19,20 +23,24 @@ fn in_bounds(grid: &Vec<Vec<char>>, pos: (usize, usize)) -> bool {
     true
 }
 
-fn distance(grid: &[Vec<char>], from: (usize, usize), to: (usize, usize)) -> i32 {
+fn distance(grid: &[Vec<char>], from: (usize, usize), to: (usize, usize), forwards: bool) -> i32 {
     let from_height = grid[from.0][from.1];
     let to_height = grid[to.0][to.1];
 
     let jump = to_height as i32 - from_height as i32;
 
-    if jump > 1 {
+    if forwards {
+        if jump > 1 {
+            return i32::MAX;
+        }
+    } else if jump < -1 {
         return i32::MAX;
     }
 
     1
 }
 
-fn dijkstra(grid: Vec<Vec<char>>, start: (usize, usize), end: (usize, usize)) {
+fn dijkstra(grid: &Vec<Vec<char>>, start: (usize, usize), is_end: IsEndFn, forwards: bool) -> i32 {
     let mut unvisited = HashSet::new();
     for row in 0..grid.len() {
         for col in 0..grid[row].len() {
@@ -42,8 +50,6 @@ fn dijkstra(grid: Vec<Vec<char>>, start: (usize, usize), end: (usize, usize)) {
 
     let mut distances = vec![vec![i32::MAX; grid[0].len()]; grid.len()];
     distances[start.0][start.1] = 0;
-
-    let mut visited = HashSet::new();
 
     let mut current = start;
     loop {
@@ -58,22 +64,20 @@ fn dijkstra(grid: Vec<Vec<char>>, start: (usize, usize), end: (usize, usize)) {
         dirs.push((current.0, current.1 + 1));
 
         for dir in dirs {
-            if in_bounds(&grid, dir) {
-                let mut dist = distance(&grid, current, dir);
+            if in_bounds(grid, dir) {
+                let mut dist = distance(grid, current, dir, forwards);
                 if dist != i32::MAX {
                     dist += distances[current.0][current.1];
                     distances[dir.0][dir.1] = distances[dir.0][dir.1].min(dist);
 
-                    if dir.0 == end.0 && dir.1 == end.1 {
-                        println!("Shortest {}", distances[dir.0][dir.1]);
-                        return;
+                    if is_end.as_ref()(dir, grid) {
+                        return distances[dir.0][dir.1];
                     }
                 }
             }
         }
 
         unvisited.remove(&current);
-        visited.insert(current);
 
         let next = unvisited
             .iter()
@@ -110,5 +114,19 @@ fn main() {
         }
     }
 
-    dijkstra(grid, start, end);
+    let shortest_end = dijkstra(
+        &grid,
+        start,
+        Box::new(move |pos, _grid| pos.0 == end.0 && pos.1 == end.1),
+        true,
+    );
+    println!("Shortest to end {}", shortest_end);
+
+    let shortest_trail = dijkstra(
+        &grid,
+        end,
+        Box::new(|pos, grid| grid[pos.0][pos.1] == 'a'),
+        false,
+    );
+    println!("Shortest trail {}", shortest_trail);
 }
