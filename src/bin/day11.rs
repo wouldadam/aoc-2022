@@ -1,18 +1,21 @@
 /// Input contains a list of monkeys.
 /// Every round each monkey, in turn, inspects their current item performing the stated operation.
-/// Th item value is then divided by three.
 /// A test is then performed on the item to decide which other monkey to throw the item to.
+/// Monkey business is the two largest monkey inspection counts multiplied together.
 /// Part A:
-/// Monkey business is the two larges monkey inspection counts multiplied together.
-/// Calculate the monkey business.
+/// The item value is divided by three between the inspection and test.
+/// Calculate the monkey business after 20 rounds.
+/// Part B.
+/// Calculate the monkey business after 10000 rounds.
 
 struct Monkey {
-    items: Vec<i32>,
-    op: Box<dyn Fn(i32) -> i32>,
-    test: Box<dyn Fn(i32) -> usize>,
+    items: Vec<u128>,
+    op: Box<dyn Fn(u128) -> u128>,
+    test: Box<dyn Fn(u128) -> usize>,
 }
 
-fn load(input: &str) -> Vec<Monkey> {
+fn load(input: &str) -> (Vec<Monkey>, u128) {
+    let mut lcm = 1;
     let monkeys = input
         .split("\n\n")
         .map(|monkey| monkey.lines().map(String::from).collect::<Vec<_>>())
@@ -23,11 +26,11 @@ fn load(input: &str) -> Vec<Monkey> {
                 .last()
                 .unwrap()
                 .split(',')
-                .map(|item| item.trim().parse::<i32>().unwrap())
+                .map(|item| item.trim().parse::<u128>().unwrap())
                 .collect::<Vec<_>>();
 
             // Operation
-            let op: Box<dyn Fn(i32) -> i32>;
+            let op: Box<dyn Fn(u128) -> u128>;
             {
                 let op_parts = monkey[2]
                     .split("new = old")
@@ -39,13 +42,13 @@ fn load(input: &str) -> Vec<Monkey> {
                     .collect::<Vec<_>>();
 
                 op = match (op_parts[0].as_str(), op_parts[1].as_str()) {
-                    ("*", "old") => Box::new(move |old: i32| old * old),
-                    ("+", "old") => Box::new(move |old: i32| old + old),
+                    ("*", "old") => Box::new(move |old: u128| old * old),
+                    ("+", "old") => Box::new(move |old: u128| old + old),
                     ("*", _val) => {
-                        Box::new(move |old: i32| old * op_parts[1].parse::<i32>().unwrap())
+                        Box::new(move |old: u128| old * op_parts[1].parse::<u128>().unwrap())
                     }
                     ("+", _val) => {
-                        Box::new(move |old: i32| old + op_parts[1].parse::<i32>().unwrap())
+                        Box::new(move |old: u128| old + op_parts[1].parse::<u128>().unwrap())
                     }
                     _ => unreachable!("Invalid operation"),
                 };
@@ -71,10 +74,11 @@ fn load(input: &str) -> Vec<Monkey> {
                 .last()
                 .unwrap()
                 .trim()
-                .parse::<i32>()
+                .parse::<u128>()
                 .unwrap();
 
-            let test = Box::new(move |val: i32| {
+            lcm *= div;
+            let test = Box::new(move |val: u128| {
                 if val % div == 0 {
                     return true_monkey;
                 }
@@ -86,11 +90,11 @@ fn load(input: &str) -> Vec<Monkey> {
         })
         .collect::<Vec<_>>();
 
-    monkeys
+    (monkeys, lcm)
 }
 
-fn calc_monkey_business(mut monkeys: Vec<Monkey>, rounds: usize) {
-    let mut inspections = vec![0; monkeys.len()];
+fn calc_monkey_business(mut monkeys: Vec<Monkey>, rounds: usize, div: u128, lcm: u128) {
+    let mut inspections: Vec<u128> = vec![0; monkeys.len()];
 
     for _round in 0..rounds {
         for monkey_idx in 0..monkeys.len() {
@@ -105,7 +109,9 @@ fn calc_monkey_business(mut monkeys: Vec<Monkey>, rounds: usize) {
                         inspections[monkey_idx] += 1;
 
                         // Worry
-                        *item /= 3;
+                        *item /= div;
+
+                        *item %= lcm;
                     }
                 }
 
@@ -132,7 +138,10 @@ fn calc_monkey_business(mut monkeys: Vec<Monkey>, rounds: usize) {
 
 fn main() {
     let input = include_str!("../../assets/day11.txt");
-    let monkeys = load(input);
 
-    calc_monkey_business(monkeys, 20);
+    let part_a = load(input);
+    calc_monkey_business(part_a.0, 20, 3, part_a.1);
+
+    let part_b = load(input);
+    calc_monkey_business(part_b.0, 10000, 1, part_b.1);
 }
