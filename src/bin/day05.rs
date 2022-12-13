@@ -1,5 +1,7 @@
 /// Takes a text file that includes 2 sections: a list of towers and a list of moves.
+/// Part A:
 /// Applies the moves to the towers and lists the top items of each tower.
+/// Part B:
 /// Moving multiple crates now maintains the order.
 use regex::Regex;
 
@@ -7,17 +9,26 @@ fn main() {
     let input = include_str!("../../assets/day05.txt");
 
     let lines = input.split("\n\n").collect::<Vec<_>>();
-    let states = lines
+    let start_state = lines
         .chunks(2)
-        .map(|info| (parse_stacks(info[0]), parse_moves(info[1])));
+        .map(|info| (parse_stacks(info[0]), parse_moves(info[1])))
+        .last()
+        .unwrap();
 
-    let ends = states.map(|state| run_moves(&state)).collect::<Vec<_>>();
+    let part_a_end = run_moves(&start_state);
+    let part_a_top = part_a_end
+        .iter()
+        .map(|stack| stack.last().unwrap())
+        .collect::<String>();
 
-    print!("Top items: ");
-    for stack in &ends[0] {
-        print!("{}", stack.last().unwrap());
-    }
-    println!();
+    let part_b_end = run_multi_moves(&start_state);
+    let part_b_top = part_b_end
+        .iter()
+        .map(|stack| stack.last().unwrap())
+        .collect::<String>();
+
+    println!("Part A top items: {}", part_a_top);
+    println!("Part B top items: {}", part_b_top);
 }
 
 fn parse_stacks(input: &str) -> Vec<Vec<char>> {
@@ -62,6 +73,19 @@ fn parse_moves(input: &str) -> Vec<Move> {
 }
 
 fn run_moves(state: &(Vec<Vec<char>>, Vec<Move>)) -> Vec<Vec<char>> {
+    let mut stacks = state.0.clone();
+
+    for mv in &state.1 {
+        for _ in 0..mv.amount {
+            let c = stacks[mv.from].pop().unwrap();
+            stacks[mv.to].push(c);
+        }
+    }
+
+    stacks
+}
+
+fn run_multi_moves(state: &(Vec<Vec<char>>, Vec<Move>)) -> Vec<Vec<char>> {
     let mut stacks = state.0.clone();
 
     for mv in &state.1 {

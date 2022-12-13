@@ -46,11 +46,48 @@ impl FromStr for Choice {
     }
 }
 
+enum Outcome {
+    Lose = 0,
+    Draw = 3,
+    Win = 6,
+}
+
+impl FromStr for Outcome {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<Outcome, Self::Err> {
+        match input {
+            "X" => Ok(Outcome::Lose),
+            "Y" => Ok(Outcome::Draw),
+            "Z" => Ok(Outcome::Win),
+            _ => Err(()),
+        }
+    }
+}
+
+impl Outcome {
+    fn needed_choice(&self, first_move: Choice) -> Choice {
+        match *self {
+            Outcome::Lose => match first_move {
+                Choice::Rock => Choice::Scissors,
+                Choice::Paper => Choice::Rock,
+                Choice::Scissors => Choice::Paper,
+            },
+            Outcome::Draw => first_move,
+            Outcome::Win => match first_move {
+                Choice::Rock => Choice::Paper,
+                Choice::Paper => Choice::Scissors,
+                Choice::Scissors => Choice::Rock,
+            },
+        }
+    }
+}
+
 fn main() {
     let input = include_str!("../../assets/day02.txt");
 
     // Parse the file into scores for each game
-    let game_scores = input.split('\n').map(|game| {
+    let a_scores = input.split('\n').map(|game| {
         let moves = game.split(' ').collect::<Vec<_>>();
         let opp_move = Choice::from_str(moves[0]).unwrap();
         let my_move = Choice::from_str(moves[1]).unwrap();
@@ -61,9 +98,25 @@ fn main() {
         choice_score + result_score
     });
 
-    // Sum scores
-    let total: i32 = game_scores.sum();
+    // Sum part a scores
+    let a_total: i32 = a_scores.sum();
+    println!("Part a total score: {}", a_total);
 
-    // 12156
-    println!("Total score: {}", total);
+    // Parse the file into scores for each game
+    let b_scores = input.split('\n').map(|game| {
+        let moves = game.split(' ').collect::<Vec<_>>();
+        let opp_move = Choice::from_str(moves[0]).unwrap();
+        let outcome = Outcome::from_str(moves[1]).unwrap();
+
+        let my_move = outcome.needed_choice(opp_move);
+
+        let outcome_score = outcome as i32;
+        let choice_score: i32 = my_move as i32;
+
+        choice_score + outcome_score
+    });
+
+    // Sum part b scores
+    let b_total: i32 = b_scores.sum();
+    println!("Part b total score: {}", b_total);
 }

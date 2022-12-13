@@ -1,8 +1,12 @@
 use std::{cell::RefCell, rc::Rc};
 
 /// Take as input a series of cd and ls commands.
-/// Find the dirs that are at most 100000 in size and sum their sizes.
 /// Sub directories and their parents are allowed to count twice.
+/// Part A:
+/// Find the dirs that are at most 100000 in size and sum their sizes.
+/// Part B:
+/// Find the smallest directory to delete that frees up at least 30000000
+/// in a filesystem with 70000000.
 
 #[derive(Debug)]
 struct Dir {
@@ -32,10 +36,7 @@ impl Dir {
         let existing = self.dirs.iter().find(|dir| dir.borrow_mut().name == name);
 
         match existing {
-            Some(dir) => {
-                println!("SAME DIR");
-                dir.clone()
-            }
+            Some(dir) => dir.clone(),
             None => {
                 let new_dir = Dir::new(name, Option::from(parent));
                 self.dirs.push(new_dir);
@@ -48,7 +49,7 @@ impl Dir {
     fn add_file(&mut self, file: File) {
         let existing = self.files.iter().find(|f| f.name == file.name);
         match existing {
-            Some(_) => println!("SAME FILE"),
+            Some(_) => {}
             None => self.files.push(file),
         }
     }
@@ -121,6 +122,25 @@ fn find_sum(root: Rc<RefCell<Dir>>) -> u64 {
     sum
 }
 
+fn find_smallest_to_free_size(root: Rc<RefCell<Dir>>) -> u64 {
+    let unused = 70000000 - root.borrow().size();
+    let needed = 30000000 - unused;
+
+    let mut stack = vec![root];
+    let mut best = u64::MAX;
+
+    while !stack.is_empty() {
+        let dir = stack.pop().unwrap();
+        stack.append(&mut dir.borrow_mut().dirs.clone());
+
+        if dir.borrow().size() >= needed && dir.borrow().size() < best {
+            best = dir.borrow().size();
+        }
+    }
+
+    best
+}
+
 fn print_tree(root: Rc<RefCell<Dir>>, level: usize) {
     print!("{:0width$}- ", "", width = level);
     print!("{}", root.borrow_mut().name);
@@ -145,9 +165,11 @@ fn main() {
         .collect::<Vec<_>>();
 
     let root = create_tree(commands);
+    print_tree(root.clone(), 0);
 
     let sum = find_sum(root.clone());
-    print_tree(root, 0);
-
     println!("Found sum: {}", sum);
+
+    let smallest_to_free = find_smallest_to_free_size(root);
+    println!("Smallest to free size: {}", smallest_to_free);
 }

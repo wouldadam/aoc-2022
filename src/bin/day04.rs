@@ -1,6 +1,9 @@
 /// Input data describes pairs of ranges of job assignment ids.
 /// Some pairs are fully contained by the other.
+/// Part A:
 /// Count the number of pair when one assignment contains the other.
+/// Part B:
+/// Count the number of pairs that overlap at all.
 use regex::Regex;
 
 fn main() {
@@ -12,7 +15,8 @@ fn main() {
     // Parse each pair into two assignments, count the ones that overlap
     let reg = Regex::new(r"^(\d*)\-(\d*),(\d*)\-(\d*)$").unwrap();
 
-    let mut count = 0;
+    let mut contain_count = 0;
+    let mut overlap_count = 0;
     for pair in pairs {
         let captures = reg.captures(pair).unwrap();
 
@@ -26,9 +30,14 @@ fn main() {
         );
 
         if (e1.0 >= e2.0 && e1.1 <= e2.1) || (e2.0 >= e1.0 && e2.1 <= e1.1) {
-            count += 1;
+            contain_count += 1;
+        }
+
+        if e1.0 <= e2.1 && e2.0 <= e1.1 {
+            overlap_count += 1;
         }
     }
 
-    println!("Overlap count: {}", count);
+    println!("Contain count: {}", contain_count);
+    println!("Overlap count: {}", overlap_count);
 }
