@@ -42,9 +42,9 @@ fn distance(grid: &[Vec<char>], from: (usize, usize), to: (usize, usize), forwar
 
 fn dijkstra(grid: &Vec<Vec<char>>, start: (usize, usize), is_end: IsEndFn, forwards: bool) -> i32 {
     let mut unvisited = HashSet::new();
-    for row in 0..grid.len() {
-        for col in 0..grid[row].len() {
-            unvisited.insert((row, col));
+    for (row_idx, row) in grid.iter().enumerate() {
+        for col_idx in 0..row.len() {
+            unvisited.insert((row_idx, col_idx));
         }
     }
 
@@ -100,16 +100,16 @@ fn main() {
 
     let mut start = (0, 0);
     let mut end = (0, 0);
-    for row in 0..grid.len() {
-        for col in 0..grid[row].len() {
-            if grid[row][col] == 'S' {
-                grid[row][col] = 'a';
-                start = (row, col);
+    for (row_idx, row) in grid.iter_mut().enumerate() {
+        for (col_idx, col) in row.iter_mut().enumerate() {
+            if *col == 'S' {
+                *col = 'a';
+                start = (row_idx, col_idx);
             }
 
-            if grid[row][col] == 'E' {
-                grid[row][col] = 'z';
-                end = (row, col);
+            if *col == 'E' {
+                *col = 'z';
+                end = (row_idx, col_idx);
             }
         }
     }

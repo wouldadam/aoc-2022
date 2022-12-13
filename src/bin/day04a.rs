@@ -25,9 +25,7 @@ fn main() {
             captures[4].parse::<u32>().unwrap(),
         );
 
-        if e1.0 >= e2.0 && e1.1 <= e2.1 {
-            count += 1;
-        } else if e2.0 >= e1.0 && e2.1 <= e1.1 {
+        if (e1.0 >= e2.0 && e1.1 <= e2.1) || (e2.0 >= e1.0 && e2.1 <= e1.1) {
             count += 1;
         }
     }
