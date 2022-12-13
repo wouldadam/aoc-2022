@@ -1,10 +1,9 @@
 /// Takes a text file that includes 2 sections: a list of towers and a list of moves.
 /// Applies the moves to the towers and lists the top items of each tower.
-/// Moving multiple crates now maintains the order.
 use regex::Regex;
 
 fn main() {
-    let input = include_str!("../../assets/day5a.txt");
+    let input = include_str!("../../assets/day05.txt");
 
     let lines = input.split("\n\n").collect::<Vec<_>>();
     let states = lines
@@ -65,13 +64,8 @@ fn run_moves(state: &(Vec<Vec<char>>, Vec<Move>)) -> Vec<Vec<char>> {
     let mut stacks = state.0.clone();
 
     for mv in &state.1 {
-        let mut items = vec![];
         for _ in 0..mv.amount {
-            items.push(stacks[mv.from].pop().unwrap());
-        }
-
-        items.reverse();
-        for c in items {
+            let c = stacks[mv.from].pop().unwrap();
             stacks[mv.to].push(c);
         }
     }

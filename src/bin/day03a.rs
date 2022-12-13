@@ -5,7 +5,7 @@
 /// Find the sum of the priorities for all rucksacks.
 use std::collections::HashSet;
 fn main() {
-    let input = include_str!("../../assets/day3a.txt");
+    let input = include_str!("../../assets/day03.txt");
 
     // Find the priority score for each rucksack
     let priority_per_rucksack = input.lines().map(|rucksack| {

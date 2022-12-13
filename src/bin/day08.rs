@@ -116,7 +116,7 @@ fn find_scenic_score(grid: &[Vec<i64>], point: (usize, usize)) -> i64 {
 /// You can only look vertically or horizontally.
 /// Print how many trees are visible.
 fn main() {
-    let input = include_str!("../../assets/day8.txt");
+    let input = include_str!("../../assets/day08.txt");
 
     // Parse the input into a grid, indexed [row][col]
     let grid = input

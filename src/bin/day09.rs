@@ -65,7 +65,7 @@ fn count_tail_pos(steps: &Vec<Step>, knots: usize) {
 }
 
 fn main() {
-    let input = include_str!("../../assets/day9.txt");
+    let input = include_str!("../../assets/day09.txt");
 
     // Parse the input moves into individual steps
     let steps = input

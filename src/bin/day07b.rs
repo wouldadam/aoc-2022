@@ -1,7 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
 /// Take as input a series of cd and ls commands.
-/// Find the dirs that are at most 100000 in size and sum their sizes.
+/// Find the smallest directory to delete that frees up at least 30000000
+/// in a filesystem with 70000000.
 /// Sub directories and their parents are allowed to count twice.
 
 #[derive(Debug)]
@@ -105,20 +106,23 @@ fn create_tree(commands: Vec<Vec<&str>>) -> Rc<RefCell<Dir>> {
     root
 }
 
-fn find_sum(root: Rc<RefCell<Dir>>) -> u64 {
+fn find_smallest_to_free_size(root: Rc<RefCell<Dir>>) -> u64 {
+    let unused = 70000000 - root.borrow().size();
+    let needed = 30000000 - unused;
+
     let mut stack = vec![root];
-    let mut sum = 0;
+    let mut best = u64::MAX;
 
     while !stack.is_empty() {
         let dir = stack.pop().unwrap();
         stack.append(&mut dir.borrow_mut().dirs.clone());
 
-        if dir.borrow_mut().size() < 100000 {
-            sum += dir.borrow_mut().size();
+        if dir.borrow().size() >= needed && dir.borrow().size() < best {
+            best = dir.borrow().size();
         }
     }
 
-    sum
+    best
 }
 
 fn print_tree(root: Rc<RefCell<Dir>>, level: usize) {
@@ -137,7 +141,7 @@ fn print_tree(root: Rc<RefCell<Dir>>, level: usize) {
 }
 
 fn main() {
-    let input = include_str!("../../assets/day7a.txt");
+    let input = include_str!("../../assets/day07.txt");
 
     let commands = input
         .lines()
@@ -146,8 +150,8 @@ fn main() {
 
     let root = create_tree(commands);
 
-    let sum = find_sum(root.clone());
+    let size = find_smallest_to_free_size(root.clone());
     print_tree(root, 0);
 
-    println!("Found sum: {}", sum);
+    println!("Smallest to free size: {}", size);
 }

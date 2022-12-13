@@ -2,7 +2,7 @@
 /// An empty line indicates that the calories are carried by a new elf.
 /// Prints the largest sum of the calories carried by a single elf.
 fn main() {
-    let input = include_str!("../../assets/day1a.txt");
+    let input = include_str!("../../assets/day01.txt");
 
     // Parse the file into foods for each elf
     let foods_per_elf = input

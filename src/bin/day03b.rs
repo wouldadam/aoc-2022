@@ -6,7 +6,7 @@
 use std::collections::HashSet;
 
 fn main() {
-    let input = include_str!("../../assets/day3a.txt");
+    let input = include_str!("../../assets/day03.txt");
 
     // Find the summed priority of badge item
     let sum = input

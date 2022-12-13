@@ -4,7 +4,7 @@
 use regex::Regex;
 
 fn main() {
-    let input = include_str!("../../assets/day4a.txt");
+    let input = include_str!("../../assets/day04.txt");
 
     // Parse into individual lines
     let pairs = input.lines();

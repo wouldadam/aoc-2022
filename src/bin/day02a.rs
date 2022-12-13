@@ -47,7 +47,7 @@ impl FromStr for Choice {
 }
 
 fn main() {
-    let input = include_str!("../../assets/day2a.txt");
+    let input = include_str!("../../assets/day02.txt");
 
     // Parse the file into scores for each game
     let game_scores = input.split('\n').map(|game| {
