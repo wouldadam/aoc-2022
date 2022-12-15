@@ -4,6 +4,9 @@
 /// If there is not rock to hit the sand falls into the abyss forever.
 /// Part a:
 /// How many units of sand come to rest before the first one falls into the abyss.
+/// Part b:
+/// There is now a floor 2 units below the lowest rock. How many units of sand until
+/// the source is blocked.
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 struct Pos {
@@ -14,6 +17,17 @@ struct Pos {
 impl Pos {
     fn new(row: i32, col: i32) -> Pos {
         Pos { row, col }
+    }
+}
+
+impl std::ops::Add<Pos> for Pos {
+    type Output = Pos;
+
+    fn add(self, rhs: Pos) -> Self::Output {
+        Pos {
+            row: self.row + rhs.row,
+            col: self.col + rhs.col,
+        }
     }
 }
 
@@ -54,7 +68,7 @@ fn load_seams(input: &str) -> (Vec<Vec<Pos>>, Pos) {
 
 /// Build the grid, '.'=empty, '#'=rock
 fn build_grid(seams: &Vec<Vec<Pos>>, max_pos: &Pos) -> Vec<Vec<char>> {
-    let mut grid = vec![vec!['.'; max_pos.col as usize + 1]; max_pos.row as usize + 1];
+    let mut grid = vec![vec!['.'; max_pos.col as usize + 500]; max_pos.row as usize + 3];
 
     // Add the seams
     for seam in seams {
@@ -83,47 +97,57 @@ fn build_grid(seams: &Vec<Vec<Pos>>, max_pos: &Pos) -> Vec<Vec<char>> {
 #[allow(dead_code)]
 fn print_grid(grid: &[Vec<char>]) {
     for row in grid {
-        for col in &row[450..504] {
+        for col in &row[450..505] {
             print!("{}", col);
         }
         println!();
     }
 }
 
-fn run_till_abyss(grid: &mut [Vec<char>], max_pos: &Pos) -> usize {
+fn run_till_abyss(grid: &mut [Vec<char>]) -> usize {
     let mut count = 0;
 
     loop {
         let mut sand_pos = SOURCE_POS;
 
         loop {
-            if sand_pos.row < max_pos.row
-                && grid[sand_pos.row as usize + 1][sand_pos.col as usize] == '.'
-            {
-                // Down
-                sand_pos += Pos::new(1, 0);
-            } else if sand_pos.row < max_pos.row
-                && sand_pos.col > 0
-                && grid[sand_pos.row as usize + 1][sand_pos.col as usize - 1] == '.'
-            {
-                // Down and left
-                sand_pos += Pos::new(1, -1);
-            } else if sand_pos.row < max_pos.row
-                && sand_pos.col < max_pos.col
-                && grid[sand_pos.row as usize + 1][sand_pos.col as usize + 1] == '.'
-            {
-                // Down and right
-                sand_pos += Pos::new(1, 1);
-            } else {
-                // At rest
-                grid[sand_pos.row as usize][sand_pos.col as usize] = 'o';
-                count += 1;
+            let down = sand_pos + Pos::new(1, 0);
+            let left_down = sand_pos + Pos::new(1, -1);
+            let right_down = sand_pos + Pos::new(1, 1);
+
+            let mut moved = false;
+            for mv in [down, left_down, right_down] {
+                // OOB
+                if mv.row < 0
+                    || mv.row >= grid.len() as i32
+                    || mv.col < 0
+                    || mv.col >= grid[0].len() as i32
+                {
+                    continue;
+                }
+
+                // Rock or sand
+                if grid[mv.row as usize][mv.col as usize] != '.' {
+                    continue;
+                }
+
+                sand_pos = mv;
+                moved = true;
                 break;
             }
 
-            // We are in the abyss
-            if sand_pos.row >= max_pos.row {
+            if sand_pos.row + 1 == grid.len() as i32 {
                 return count;
+            }
+
+            if sand_pos == SOURCE_POS {
+                return count;
+            }
+
+            if !moved {
+                grid[sand_pos.row as usize][sand_pos.col as usize] = 'o';
+                count += 1;
+                break;
             }
         }
     }
@@ -132,10 +156,16 @@ fn run_till_abyss(grid: &mut [Vec<char>], max_pos: &Pos) -> usize {
 fn main() {
     let input = include_str!("../../assets/day14.txt");
     let (seams, max_pos) = load_seams(input);
-    let mut grid = build_grid(&seams, &max_pos);
-    print_grid(&grid);
 
-    let units_till_abyss = run_till_abyss(&mut grid, &max_pos);
-
+    let mut a_grid = build_grid(&seams, &max_pos);
+    let units_till_abyss = run_till_abyss(&mut a_grid);
     println!("Units of sand till abyss {}", units_till_abyss);
+
+    let mut b_grid = build_grid(&seams, &max_pos);
+    for c in b_grid.last_mut().unwrap() {
+        *c = '#';
+    }
+
+    let units_till_blocked = run_till_abyss(&mut b_grid);
+    println!("Units of sand till blocked {}", units_till_blocked + 1);
 }
