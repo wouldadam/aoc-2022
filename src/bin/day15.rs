@@ -38,13 +38,14 @@ impl Grid {
     }
 
     fn in_area(&self, pos: &Pos) -> bool {
-        for area in &self.areas {
-            if area.in_area(pos) {
-                return true;
-            }
-        }
+        self.areas.iter().any(|area| area.in_area(pos))
+    }
 
-        false
+    fn edges(&self) -> Vec<Pos> {
+        self.areas
+            .iter()
+            .flat_map(|area| area.edges())
+            .collect::<Vec<_>>()
     }
 
     #[allow(dead_code)]
@@ -151,6 +152,23 @@ impl Area {
 
         self.range >= dist
     }
+
+    /// Get the edges of the area as individual grid pos
+    fn edges(&self) -> Vec<Pos> {
+        let mut edges = Vec::new();
+        let edge_dist = self.range + 1;
+
+        for x_step in 0..edge_dist {
+            let y_step = edge_dist - x_step;
+
+            edges.push((self.pos.0 + x_step, self.pos.1 + y_step));
+            edges.push((self.pos.1 + y_step, self.pos.0 - x_step));
+            edges.push((self.pos.0 - x_step, self.pos.1 - y_step));
+            edges.push((self.pos.1 - y_step, self.pos.0 + x_step));
+        }
+
+        edges
+    }
 }
 
 /// Calculate the Manhattan distance between two positions
@@ -171,10 +189,33 @@ fn count_known_empty(grid: &mut Grid, y: i64) -> i64 {
     count
 }
 
+fn find_hidden_freq(grid: &mut Grid, min: Pos, max: Pos) -> Option<(Pos, i64)> {
+    for pos in grid.edges() {
+        if pos.0 < min.0 || pos.1 < min.1 || pos.0 > max.0 || pos.1 > max.1 {
+            continue;
+        }
+
+        if grid.has_item(&pos) || grid.in_area(&pos) {
+            continue;
+        }
+
+        return Some((pos, (pos.0 * 4000000) + pos.1));
+    }
+
+    None
+}
+
 fn main() {
     let input = include_str!("../../assets/day15.txt");
     let mut grid = Grid::from(input);
 
     let known_empty = count_known_empty(&mut grid, 2000000);
     println!("Known empty {}", known_empty);
+
+    let (hidden_pos, hidden_freq) =
+        find_hidden_freq(&mut grid, (0, 0), (4000000, 4000000)).unwrap_or(((0, 0), -1));
+    println!(
+        "Hidden freq {} at {},{}",
+        hidden_freq, hidden_pos.0, hidden_pos.1
+    );
 }
