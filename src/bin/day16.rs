@@ -1,7 +1,6 @@
 use std::{
-    cell::RefCell,
     collections::{HashMap, HashSet},
-    rc::Rc,
+    time,
 };
 
 use regex::Regex;
@@ -15,18 +14,20 @@ use regex::Regex;
 /// Part A:
 /// What is the most pressure that can be released?
 
+#[derive(Clone)]
 struct Valve {
     label: String,
     flow_rate: i32,
-    tunnels: HashSet<String>,
+    tunnels: Vec<String>,
+    costs: HashMap<String, i32>,
 }
 
-type Valves = HashMap<String, Rc<RefCell<Valve>>>;
+type Valves = HashMap<String, Valve>;
 
 #[derive(Debug, Clone)]
 struct State {
     turned_on: HashSet<String>,
-    room: String,
+    current_room: String,
     previous_room: String,
     remaining: i32,
     total: i32,
@@ -35,54 +36,29 @@ struct State {
 
 impl State {
     fn get_moves(&self, valves: &Valves) -> Vec<State> {
-        let mut new_states = vec![];
-        let current_valve = valves[&self.room].clone();
+        let mut moves = vec![];
+        let valve = &valves[&self.current_room];
 
-        // For every tunnel in the current room
-        for tunnel in &current_valve.borrow().tunnels {
-            // We can turn on the valve
-            if !self.turned_on.contains(&self.room) && current_valve.borrow().flow_rate > 0 {
-                // We can turn on and move
-                if self.remaining >= 2 {
-                    let mut new_state = self.clone();
-                    new_state.turned_on.insert(self.room.clone());
-                    new_state.total += (new_state.remaining - 1) * current_valve.borrow().flow_rate;
-                    new_state.remaining -= 2;
-                    new_state.previous_room = self.room.clone();
-                    new_state.room = tunnel.clone();
-                    new_state.sol = format!("{} O -> {}", new_state.sol, tunnel);
-
-                    new_states.push(new_state);
-                } else if self.remaining == 1 {
-                    // Or just turn on if at the end
-                    let mut new_state = self.clone();
-                    new_state.turned_on.insert(self.room.clone());
-                    new_state.total += (new_state.remaining - 1) * current_valve.borrow().flow_rate;
-                    new_state.remaining -= 1;
-                    new_state.previous_room = self.room.clone();
-                    new_state.sol = format!("{} O", new_state.sol);
-
-                    new_states.push(new_state);
-                }
-            }
-
-            if *tunnel == self.previous_room {
-                continue;
-            }
-
-            // We can move to it without turning the valve, no point unless we we be able to do something
-            if self.remaining >= 2 {
+        // Each move moves to a dest and turns on the valve.
+        // We always turn the valve on as out dests cover paths to all valves.
+        for (dest, cost) in &valve.costs {
+            if !self.turned_on.contains(dest)
+                && self.remaining > *cost
+                && valves[dest].flow_rate > 0
+            {
                 let mut new_state = self.clone();
-                new_state.remaining -= 1;
-                new_state.previous_room = new_state.room;
-                new_state.room = tunnel.clone();
-                new_state.sol = format!("{} -> {}", new_state.sol, tunnel);
+                new_state.turned_on.insert(dest.clone());
+                new_state.remaining -= cost + 1;
+                new_state.total += new_state.remaining * valves[dest].flow_rate;
+                new_state.previous_room = new_state.current_room;
+                new_state.current_room = dest.clone();
+                new_state.sol = format!("{} -> {}", new_state.sol, dest);
 
-                new_states.push(new_state);
+                moves.push(new_state);
             }
         }
 
-        new_states
+        moves
     }
 }
 
@@ -91,29 +67,52 @@ impl Valve {
         let reg = Regex::new(r"^Valve ([[:upper:]]{2}) has flow rate=(\d*); tunnel[s]? lead[s]? to valve[s]? ((?:[[:upper:]]{2}(?:, *)?)*)$").unwrap();
         let mut valves = Valves::new();
 
-        // Add all valves
+        // Parse the input
         for line in input.lines() {
             let caps = reg.captures(line).unwrap();
-            let valve = Rc::new(RefCell::new(Valve {
+            let tunnels = caps[3]
+                .split(',')
+                .map(|l| l.trim().to_string())
+                .collect::<Vec<_>>();
+
+            let valve = Valve {
                 label: String::from(&caps[1]),
                 flow_rate: caps[2].parse::<i32>().unwrap(),
-                tunnels: HashSet::new(),
-            }));
+                tunnels,
+                costs: HashMap::new(),
+            };
 
-            valves.insert(valve.borrow().label.clone(), valve.clone());
+            valves.insert(valve.label.clone(), valve);
         }
 
-        // Add the tunnels
-        for line in input.lines() {
-            let caps = reg.captures(line).unwrap();
-            let label = String::from(&caps[1]);
+        // Work out the cost for moving between any two valves
+        let total_valves = valves.len();
+        let mut valve_costs = HashMap::new();
+        for valve in valves.values() {
+            let mut costs = HashMap::new();
+            let mut cost = 1;
 
-            for tunnel_to in caps[3].split(',').map(|l| l.trim()) {
-                valves[&label]
-                    .borrow_mut()
-                    .tunnels
-                    .insert(String::from(tunnel_to));
+            let mut layer = valve.tunnels.clone();
+            while costs.len() < total_valves - 1 {
+                let mut next_layer: Vec<String> = vec![];
+
+                for dest in &layer {
+                    if !costs.contains_key(dest) && *dest != valve.label {
+                        costs.insert(dest.clone(), cost);
+
+                        next_layer.extend(valves[dest].tunnels.clone());
+                    }
+                }
+
+                layer = next_layer;
+                cost += 1;
             }
+
+            valve_costs.insert(valve.label.clone(), costs);
+        }
+
+        for (label, costs) in valve_costs {
+            valves.get_mut(&label).unwrap().costs = costs;
         }
 
         valves
@@ -121,12 +120,13 @@ impl Valve {
 }
 
 fn main() {
+    let start = time::SystemTime::now();
     let input = include_str!("../../assets/day16.txt");
     let valves = Valve::from(input);
 
     let mut best = State {
         turned_on: HashSet::new(),
-        room: String::from("AA"),
+        current_room: String::from("AA"),
         previous_room: String::from(""),
         remaining: 30,
         total: 0,
@@ -148,4 +148,7 @@ fn main() {
             }
         }
     }
+
+    let end = time::SystemTime::now();
+    println!("Took {:?}", end.duration_since(start));
 }
