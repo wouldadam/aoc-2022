@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 /// Rocks are falling with the familiar shapes of:
 /// ####
 ///
@@ -26,22 +28,22 @@
 /// Part A:
 /// How tall will the tower of rocks be after 2022 rocks have fallen?
 
-const GRID_WIDTH: i32 = 7;
-const COL_GAP: i32 = 2;
-const ROW_GAP: i32 = 3;
+const GRID_WIDTH: i64 = 7;
+const COL_GAP: i64 = 2;
+const ROW_GAP: i64 = 3;
 const EMPTY_CELL: char = '.';
 const SHAPE_CELL: char = 'X';
 const FULL_CELL: char = '#';
 
 #[derive(Clone)]
 struct Piece {
-    row: i32,
-    col: i32,
-    shape: Vec<Vec<char>>,
+    row: i64,
+    col: i64,
+    shape: Vec<Vec<char>>, // indexed row,col
 }
 
 impl Piece {
-    fn can_place(&self, grid: &Grid, row: i32, col: i32) -> bool {
+    fn can_place(&self, grid: &Grid, row: i64, col: i64) -> bool {
         // The piece is outside the side of the grid
         if !(0..GRID_WIDTH + 1).contains(&col)
             || !(0..GRID_WIDTH + 1).contains(&(col + self.width()))
@@ -79,15 +81,15 @@ impl Piece {
         true
     }
 
-    fn width(&self) -> i32 {
-        self.shape[0].len() as i32
+    fn width(&self) -> i64 {
+        self.shape[0].len() as i64
     }
 
-    fn height(&self) -> i32 {
-        self.shape.len() as i32
+    fn height(&self) -> i64 {
+        self.shape.len() as i64
     }
 
-    fn new(count: i32, tower_height: i32) -> Self {
+    fn new(count: i64, tower_height: i64) -> Self {
         let idx = count % 5;
 
         if idx == 0 {
@@ -105,7 +107,7 @@ impl Piece {
         unreachable!("This shouldn't happen");
     }
 
-    fn new_row(tower_height: i32) -> Self {
+    fn new_row(tower_height: i64) -> Self {
         Piece {
             row: tower_height + ROW_GAP,
             col: COL_GAP,
@@ -113,7 +115,7 @@ impl Piece {
         }
     }
 
-    fn new_plus(tower_height: i32) -> Self {
+    fn new_plus(tower_height: i64) -> Self {
         Piece {
             row: tower_height + ROW_GAP,
             col: COL_GAP,
@@ -125,7 +127,7 @@ impl Piece {
         }
     }
 
-    fn new_l(tower_height: i32) -> Self {
+    fn new_l(tower_height: i64) -> Self {
         Piece {
             row: tower_height + ROW_GAP,
             col: COL_GAP,
@@ -137,7 +139,7 @@ impl Piece {
         }
     }
 
-    fn new_square(tower_height: i32) -> Self {
+    fn new_square(tower_height: i64) -> Self {
         Piece {
             row: tower_height + ROW_GAP,
             col: COL_GAP,
@@ -145,7 +147,7 @@ impl Piece {
         }
     }
 
-    fn new_col(tower_height: i32) -> Self {
+    fn new_col(tower_height: i64) -> Self {
         Piece {
             row: tower_height + ROW_GAP,
             col: COL_GAP,
@@ -156,6 +158,7 @@ impl Piece {
 
 #[derive(Clone)]
 struct Grid {
+    // indexed row,col
     data: Vec<Vec<char>>,
 }
 
@@ -164,18 +167,18 @@ impl Grid {
         Grid { data: vec![] }
     }
 
-    fn tower_height(&self) -> i32 {
+    fn tower_height(&self) -> i64 {
         if self.data.is_empty() {
             return 0;
         }
 
         for (idx, row) in self.data.iter().enumerate() {
             if !row.contains(&FULL_CELL) {
-                return (idx + 1) as i32;
+                return (idx + 1) as i64;
             }
         }
 
-        self.data.len() as i32
+        self.data.len() as i64
     }
 
     fn place(&mut self, piece: &Piece) {
@@ -217,19 +220,19 @@ impl Grid {
             println!();
         }
 
-        println!()
+        println!();
     }
 }
 
-fn main() {
-    let input = include_str!("../../assets/day17.txt");
-    let moves = input.chars().collect::<Vec<_>>();
-
-    // Grid is indexed [row][col], bottom left is [0][0]
+fn run(moves: &Vec<char>, rocks: i64) {
     let mut grid = Grid::new();
 
+    let mut cycles = HashMap::new();
+    let mut from_cycle = 0;
+
     let mut move_idx = 0;
-    for count in 0..2022 {
+    let mut count = 0;
+    while count < rocks {
         let mut piece = Piece::new(count, grid.tower_height());
 
         loop {
@@ -254,8 +257,50 @@ fn main() {
                 break;
             }
         }
+
+        if from_cycle == 0 {
+            let piece_idx = count % 5;
+            let key = (piece_idx, move_idx);
+
+            if let Some((2, prev_count, prev_top)) = cycles.get(&key) {
+                println!(
+                    "Found cycle at rock {}, height {}",
+                    count,
+                    grid.tower_height()
+                );
+
+                let count_diff = count - prev_count + 1;
+                let top_diff = grid.tower_height() - prev_top;
+                let repeats = (rocks - count) / count_diff;
+
+                from_cycle = repeats * top_diff;
+                count += repeats * count_diff;
+                count += 1;
+                println!("Skipping {} height to rock {}", from_cycle, count);
+            } else {
+                count += 1;
+            }
+
+            cycles
+                .entry(key)
+                .and_modify(|(occurrence, prev_count, prev_top)| {
+                    *occurrence += 1;
+                    *prev_count = count;
+                    *prev_top = grid.tower_height();
+                })
+                .or_insert((1, count, grid.tower_height()));
+        } else {
+            count += 1;
+        }
     }
 
-    grid.print(None);
-    println!("Tower height {}", grid.tower_height());
+    println!("Tower height {}", grid.tower_height() + from_cycle);
+}
+
+fn main() {
+    let input = include_str!("../../assets/day17.txt");
+    let moves = input.chars().collect::<Vec<_>>();
+
+    run(&moves, 2022);
+    run(&moves, 1_000_000_000_000);
 }
