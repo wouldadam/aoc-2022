@@ -14,7 +14,8 @@ use regex::Regex;
 /// The quality of a blueprint is id * number of geodes in 24 minutes.
 /// Sum the quality of all blueprints.
 
-const DURATION_MINS: i32 = 24;
+const PART_A_DURATION_MINS: i32 = 24;
+const PART_B_DURATION_MINS: i32 = 32;
 const ACTION_MINS: i32 = 1;
 
 // (ore, clay, obsidian, geode)
@@ -142,14 +143,25 @@ const OBSIDIAN_ROBOT: Materials = Materials(0, 0, 1, 0);
 const GEODE_ROBOT: Materials = Materials(0, 0, 0, 1);
 
 fn sum_qualities(blueprints: &[Blueprint]) -> i32 {
-    let sum: i32 = blueprints.iter().map(calc_quality).sum();
+    let sum: i32 = blueprints
+        .iter()
+        .map(|b| b.id * calc_geodes(b, PART_A_DURATION_MINS))
+        .sum();
+    sum
+}
+
+fn prod_geodes(blueprints: &[Blueprint]) -> i32 {
+    let sum: i32 = blueprints
+        .iter()
+        .map(|b| calc_geodes(b, PART_B_DURATION_MINS))
+        .product();
     sum
 }
 
 /// If can afford everything then don't do nothing
 /// Don't build more robots than needed to build another robot
 /// Ignore state that you have already reached
-fn calc_quality(blueprint: &Blueprint) -> i32 {
+fn calc_geodes(blueprint: &Blueprint, duration: i32) -> i32 {
     let start_time = time::SystemTime::now();
     println!("Starting blueprint {}", blueprint.id);
 
@@ -162,7 +174,7 @@ fn calc_quality(blueprint: &Blueprint) -> i32 {
         .max(blueprint.geode_robot_cost);
 
     let start = State {
-        remaining_mins: DURATION_MINS,
+        remaining_mins: duration,
         storage: Materials(0, 0, 0, 0),
         robots: Materials(1, 0, 0, 0),
         next_robot: None,
@@ -179,7 +191,7 @@ fn calc_quality(blueprint: &Blueprint) -> i32 {
         state.remaining_mins -= ACTION_MINS;
 
         if state.remaining_mins <= 0 {
-            best = best.max(blueprint.id * state.storage.3);
+            best = best.max(state.storage.3);
             continue;
         }
 
@@ -246,8 +258,11 @@ fn main() {
     let input = include_str!("../../assets/day19.txt");
     let blueprints = input.lines().map(Blueprint::from).collect::<Vec<_>>();
 
-    let sum = sum_qualities(&blueprints);
-    println!("Quality sum: {}", sum);
+    let part_a = sum_qualities(&blueprints);
+    println!("Quality sum: {}", part_a);
+
+    let part_b = prod_geodes(&blueprints[0..3]);
+    println!("Geode prod: {}", part_b);
 
     let end = time::SystemTime::now();
     println!("Took {:?}", end.duration_since(start));
