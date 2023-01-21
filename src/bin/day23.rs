@@ -97,7 +97,9 @@ impl State<'_> {
         State { elves, checks }
     }
 
-    fn run(&mut self, rounds: i64) {
+    fn run(&mut self, rounds: i64) -> bool {
+        let mut any_moves = false;
+
         for _ in 0..rounds {
             let mut new_elves: HashMap<Pos, (Pos, bool)> = HashMap::new();
             for elf in &self.elves {
@@ -136,6 +138,8 @@ impl State<'_> {
                 if !moved {
                     new_elves.insert(elf.clone(), (*elf, false));
                 }
+
+                any_moves |= moved;
             }
 
             self.elves = new_elves
@@ -147,6 +151,8 @@ impl State<'_> {
 
             self.checks.rotate_left(1);
         }
+
+        !any_moves
     }
 
     fn min_max(&self) -> (Pos, Pos) {
@@ -209,8 +215,22 @@ fn main() {
     let mut state = State::from(input);
     state.print();
 
-    state.run(10);
-    println!("Empty tiles: {}", state.empty_area());
+    let mut round = 0;
+    loop {
+        let is_settled = state.run(1);
+        round += 1;
+
+        if round == 10 {
+            println!("Empty tiles: {}", state.empty_area());
+        }
+
+        if is_settled {
+            println!("Settled at round {}", round);
+            break;
+        }
+    }
+
+    state.print();
 
     let end = time::SystemTime::now();
     println!("Took {:?}", end.duration_since(start));
