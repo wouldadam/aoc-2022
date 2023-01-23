@@ -63,7 +63,7 @@ impl State<'_> {
             })
             .collect::<HashSet<_>>();
 
-        let mut checks = vec![
+        let checks = vec![
             (
                 // N
                 "N",
@@ -144,8 +144,8 @@ impl State<'_> {
 
             self.elves = new_elves
                 .iter()
-                .filter(|(k, v)| v.1 == false)
-                .map(|(k, v)| k)
+                .filter(|(_k, v)| v.1 == false)
+                .map(|(k, _v)| k)
                 .cloned()
                 .collect::<HashSet<_>>();
 
