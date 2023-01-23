@@ -12,6 +12,8 @@ use num::integer::lcm;
 /// You cannot share a position with a blizzard.
 /// Part A:
 /// What is the fewest number of moves to reach the goal?
+/// Part B:
+/// What is the fewest moves to go: start -> end -> start -> end
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Pos {
@@ -204,9 +206,8 @@ struct State {
     pos: Pos,
 }
 
-fn solve(start_grid: &Grid) {
+fn compute(start_grid: &Grid) -> Vec<Grid> {
     // Pre-compute all grid states
-    println!("Computing...");
     let mut grid_states = vec![start_grid.clone()];
     let lcm = lcm(start_grid.rows, start_grid.cols);
     for _ in 0..lcm {
@@ -215,16 +216,17 @@ fn solve(start_grid: &Grid) {
         grid_states.push(next);
     }
 
-    let mut queue = vec![State {
-        minute: 0,
-        pos: start_grid.start,
-    }];
+    grid_states
+}
+
+fn solve(grid_states: &Vec<Grid>, start: State, end: Pos) -> i64 {
+    let mut queue = vec![start];
     let steps = vec![
         Pos { row: 1, col: 0 },
         Pos { row: 0, col: 1 },
         Pos { row: 0, col: 0 },
-        Pos { row: -1, col: 0 },
         Pos { row: 0, col: -1 },
+        Pos { row: -1, col: 0 },
     ];
     let mut visited = HashSet::new();
     visited.insert(queue[0].clone());
@@ -241,11 +243,11 @@ fn solve(start_grid: &Grid) {
                 continue;
             }
 
-            let grid = &grid_states[(new_state.minute % lcm) as usize];
+            let grid = &grid_states[(new_state.minute as usize % grid_states.len()) as usize];
             if grid.find_blizzard(new_state.pos).is_none() && grid.in_grid(new_state.pos) {
-                if new_state.pos == grid.end {
-                    println!("Found end in {} minutes", new_state.minute);
-                    return;
+                if new_state.pos == end {
+                    grid.print(state.pos);
+                    return new_state.minute;
                 }
 
                 visited.insert(new_state.clone());
@@ -253,6 +255,8 @@ fn solve(start_grid: &Grid) {
             }
         }
     }
+
+    panic!("Unsolvable");
 }
 
 fn main() {
@@ -260,9 +264,48 @@ fn main() {
     let input = include_str!("../../assets/day24.txt");
 
     println!("Loading...");
-    let grid = Grid::from(input);
+    let start_grid = Grid::from(input);
 
-    solve(&grid);
+    println!("Computing...");
+    let grid_states = compute(&start_grid);
+
+    let leg1_mins = solve(
+        &grid_states,
+        State {
+            pos: start_grid.start,
+            minute: 0,
+        },
+        start_grid.end,
+    );
+    println!("Start -> End took {} minutes", leg1_mins);
+
+    let leg2_mins = solve(
+        &grid_states,
+        State {
+            pos: start_grid.end,
+            minute: leg1_mins - 1,
+        },
+        start_grid.start,
+    );
+    println!(
+        "End -> Start took {} minutes, total {}",
+        leg2_mins - leg1_mins,
+        leg2_mins
+    );
+
+    let leg3_mins = solve(
+        &grid_states,
+        State {
+            pos: start_grid.start,
+            minute: leg2_mins - 1,
+        },
+        start_grid.end,
+    ) - 1;
+    println!(
+        "Start -> End took {} minutes, total {}",
+        leg3_mins - leg2_mins,
+        leg3_mins
+    );
 
     let end = time::SystemTime::now();
     println!("Took {:?}", end.duration_since(start));
